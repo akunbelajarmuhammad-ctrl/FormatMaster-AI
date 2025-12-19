@@ -1,9 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExtractedTableData, ChapterType } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-
-const ai = new GoogleGenAI({ apiKey });
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // 1. SYSTEM PERSONA (The Master Persona)
 const SYSTEM_INSTRUCTION = `
@@ -40,7 +39,8 @@ export const cleanupText = async (text: string): Promise<string> => {
     });
     return response.text || "";
   } catch (error) {
-    throw new Error("Failed to process text.");
+    console.error("Gemini API Error:", error);
+    throw new Error("Failed to process text. Check API Key configuration.");
   }
 };
 
@@ -258,8 +258,7 @@ export const generateChapter = async (chapter: ChapterType, inputMaterial: strin
       model: 'gemini-3-flash-preview',
       contents: `${SYSTEM_INSTRUCTION} \n\n ${specificPrompt}`,
       config: {
-        temperature: 0.5, 
-        maxOutputTokens: 8192, 
+        temperature: 0.5,
       }
     });
 
@@ -273,7 +272,7 @@ export const generateChapter = async (chapter: ChapterType, inputMaterial: strin
     return finalText;
   } catch (error) {
     console.error(`Error generating ${chapter}:`, error);
-    throw new Error(`Failed to generate ${chapter}.`);
+    throw new Error(`Failed to generate ${chapter}. Check API Key.`);
   }
 };
 
@@ -291,7 +290,7 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
     });
     return response.text || "";
   } catch (error) {
-    throw new Error("Failed to extract text.");
+    throw new Error("Failed to extract text. Check API Key.");
   }
 };
 
@@ -321,6 +320,6 @@ export const extractTableFromImage = async (base64Image: string): Promise<Extrac
     if (!jsonText) throw new Error("No data");
     return JSON.parse(jsonText) as ExtractedTableData;
   } catch (error) {
-    throw new Error("Failed to extract table.");
+    throw new Error("Failed to extract table. Check API Key.");
   }
 };

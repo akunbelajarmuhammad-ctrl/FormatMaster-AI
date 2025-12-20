@@ -1,8 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExtractedTableData, ChapterType } from "../types";
 
-// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper function to initialize AI only when needed (Lazy Loading).
+// This prevents the app from crashing on load if the key is missing in Vercel.
+const getAIClient = () => {
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API Key belum disetting! Buka Dashboard Vercel > Settings > Environment Variables > Tambahkan Key bernama 'API_KEY'.");
+  }
+  
+  return new GoogleGenAI({ apiKey });
+};
 
 // 1. SYSTEM PERSONA (The Master Persona)
 const SYSTEM_INSTRUCTION = `
@@ -27,6 +36,7 @@ Kamu adalah asisten penulisan skripsi profesional standar universitas di Indones
 export const cleanupText = async (text: string): Promise<string> => {
   if (!text) return "";
   try {
+    const ai = getAIClient(); // Init Client Here
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `You are a professional text editor. Clean up this AI-generated text. 
@@ -38,9 +48,10 @@ export const cleanupText = async (text: string): Promise<string> => {
       Input: ${text}`,
     });
     return response.text || "";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
-    throw new Error("Failed to process text. Check API Key configuration.");
+    if (error.message.includes("API Key")) throw error;
+    throw new Error("Gagal memproses teks. Pastikan API Key valid.");
   }
 };
 
@@ -254,6 +265,7 @@ export const generateChapter = async (chapter: ChapterType, inputMaterial: strin
   }
 
   try {
+    const ai = getAIClient(); // Init Client Here
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `${SYSTEM_INSTRUCTION} \n\n ${specificPrompt}`,
@@ -270,15 +282,17 @@ export const generateChapter = async (chapter: ChapterType, inputMaterial: strin
     }
 
     return finalText;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error generating ${chapter}:`, error);
-    throw new Error(`Failed to generate ${chapter}. Check API Key.`);
+    if (error.message.includes("API Key")) throw error;
+    throw new Error(`Gagal membuat bab. Cek koneksi atau API Key.`);
   }
 };
 
 export const extractTextFromImage = async (base64Image: string): Promise<string> => {
   try {
     const cleanBase64 = base64Image.split(',')[1] || base64Image;
+    const ai = getAIClient(); // Init Client Here
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
@@ -289,14 +303,16 @@ export const extractTextFromImage = async (base64Image: string): Promise<string>
       }
     });
     return response.text || "";
-  } catch (error) {
-    throw new Error("Failed to extract text. Check API Key.");
+  } catch (error: any) {
+    if (error.message.includes("API Key")) throw error;
+    throw new Error("Gagal membaca gambar. Cek API Key.");
   }
 };
 
 export const extractTableFromImage = async (base64Image: string): Promise<ExtractedTableData> => {
   try {
     const cleanBase64 = base64Image.split(',')[1] || base64Image;
+    const ai = getAIClient(); // Init Client Here
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
@@ -319,7 +335,8 @@ export const extractTableFromImage = async (base64Image: string): Promise<Extrac
     const jsonText = response.text;
     if (!jsonText) throw new Error("No data");
     return JSON.parse(jsonText) as ExtractedTableData;
-  } catch (error) {
-    throw new Error("Failed to extract table. Check API Key.");
+  } catch (error: any) {
+    if (error.message.includes("API Key")) throw error;
+    throw new Error("Gagal mengekstrak tabel. Cek API Key.");
   }
 };

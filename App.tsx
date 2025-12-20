@@ -164,8 +164,8 @@ function App() {
         setOutputText(html);
       }
 
-    } catch (error) {
-      alert("Terjadi kesalahan. Coba lagi.");
+    } catch (error: any) {
+      alert(error.message || "Terjadi kesalahan. Coba lagi.");
     } finally {
       setIsLoading(false);
       setLoadingStep("");
